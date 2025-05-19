@@ -8,8 +8,9 @@ import {
   FiChevronUp,
 } from "react-icons/fi";
 import Pagination from "../../components/Pagination";
+import LoadingBar from "../../components/LoadingBar";
 import api from "../../services/api";
-import { Spin, notification } from "antd";
+import { notification } from "antd";
 import pdfIcon from "../../assets/icons/FilePdf.png";
 import wordIcon from "../../assets/icons/FileDoc.png";
 import excelIcon from "../../assets/icons/FileXls.png";
@@ -341,13 +342,11 @@ const FileHistory = () => {
         </div>
       </div>
 
+      {loading && <LoadingBar />}
+
       <div className="bg-white p-[0.5rem] rounded-b-lg flex-1 flex flex-col ">
         <div ref={tableContainerRef} className="flex-1 h-full flex flex-col">
-          {loading ? (
-            <div className="flex justify-center items-center h-40 ">
-              <Spin size="large" />
-            </div>
-          ) : error ? (
+          {error ? (
             <div className="text-center py-10 text-red-500">
               <p>{error}</p>
               <button
@@ -488,6 +487,7 @@ const FileHistory = () => {
         <div
           className="fixed inset-0 flex justify-center items-center z-50"
           style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
+          onClick={handleCloseTranslationsModal}
         >
           <div
             className="bg-white p-[1.5rem] rounded-lg shadow-xl w-11/12 max-w-6xl max-h-[90vh] overflow-auto"
@@ -648,15 +648,6 @@ const FileHistory = () => {
                   )}
                 </tbody>
               </table>
-            </div>
-
-            <div className="flex justify-end mt-4">
-              <button
-                className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
-                onClick={handleCloseTranslationsModal}
-              >
-                Close
-              </button>
             </div>
           </div>
         </div>

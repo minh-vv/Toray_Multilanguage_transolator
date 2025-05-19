@@ -186,172 +186,176 @@ const SuggestionReviewList = () => {
   };
 
   return (
-    <div className="flex flex-1 flex-col h-full gap-[0.25rem]">
-      <div className="bg-white p-[1rem] rounded-t-lg">
-        <div className="flex flex-wrap justify-between items-center gap-[1rem]">
-          <h2 className="text-2xl font-bold text-gray-800">
-            Review and Add Keywords
-          </h2>
-          <div>
-            <span className="text-gray-500 text-base">
-              <i>
-                As a Keeper, please review, complete or fix translations before
-                adding to the library
-              </i>
-            </span>
+    <div className="flex flex-col h-full">
+      <div className="flex flex-1 flex-col h-full gap-[0.25rem]">
+        <div className="bg-white p-[1rem] rounded-t-lg">
+          <div className="flex flex-wrap justify-between items-center gap-[1rem]">
+            <h2 className="text-2xl font-bold text-gray-800">
+              Review and Add Keywords
+            </h2>
+            <div>
+              <span className="text-gray-500 text-base">
+                <i>
+                  As a Keeper, please review, complete or fix translations before
+                  adding to the library
+                </i>
+              </span>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div
-        ref={containerRef}
-        className="bg-white p-[0.5rem] rounded-b-lg flex-1 flex flex-col"
-      >
-        <div className="overflow-auto flex-1">
-          <table className="w-full border-collapse bg-white rounded-lg">
-            <thead>
-              <tr className="bg-[#004098CC] text-white font-bold">
-                <th className="p-[0.75rem] border-b border-gray-300 w-[5%] text-center">
-                  No
-                </th>
-                <th className="p-[0.75rem] border-b border-gray-300 w-[15%] text-center">
-                  Japanese
-                </th>
-                <th className="p-[0.75rem] border-b border-gray-300 w-[15%] text-center">
-                  English
-                </th>
-                <th className="p-[0.75rem] border-b border-gray-300 w-[15%] text-center">
-                  Vietnamese
-                </th>
-                <th className="p-[0.75rem] border-b border-gray-300 w-[15%] text-center">
-                  Chinese (Traditional)
-                </th>
-                <th className="p-[0.75rem] border-b border-gray-300 w-[15%] text-center">
-                  Chinese (Simplified)
-                </th>
-                <th className="p-[0.75rem] border-b border-gray-300 w-[10%] text-center">
-                  Created By
-                </th>
-                <th className="p-[0.75rem] border-b border-gray-300 w-[10%] text-center">
-                  Action
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan={8} className="p-4 text-center">
-                    Loading...
-                  </td>
+        <div
+          ref={containerRef}
+          className="bg-white p-[0.5rem] rounded-b-lg flex-1 flex flex-col"
+        >
+          <div className="overflow-auto flex-1">
+            <table className="w-full border-collapse bg-white rounded-lg">
+              <thead>
+                <tr className="bg-[#004098CC] text-white font-bold">
+                  <th className="p-[0.75rem] border-b border-gray-300 w-[5%] text-center">
+                    No
+                  </th>
+                  <th className="p-[0.75rem] border-b border-gray-300 w-[15%] text-center">
+                    Japanese
+                  </th>
+                  <th className="p-[0.75rem] border-b border-gray-300 w-[15%] text-center">
+                    English
+                  </th>
+                  <th className="p-[0.75rem] border-b border-gray-300 w-[15%] text-center">
+                    Vietnamese
+                  </th>
+                  <th className="p-[0.75rem] border-b border-gray-300 w-[15%] text-center">
+                    Chinese (Traditional)
+                  </th>
+                  <th className="p-[0.75rem] border-b border-gray-300 w-[15%] text-center">
+                    Chinese (Simplified)
+                  </th>
+                  <th className="p-[0.75rem] border-b border-gray-300 w-[10%] text-center">
+                    Created By
+                  </th>
+                  <th className="p-[0.75rem] border-b border-gray-300 w-[10%] text-center">
+                    Action
+                  </th>
                 </tr>
-              ) : suggestions.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={8}
-                    className="p-4 text-center text-gray-500 italic"
-                  >
-                    No pending suggestions found.
-                  </td>
-                </tr>
-              ) : (
-                suggestions.map((sug, index) => (
-                  <tr
-                    key={sug.id}
-                    className={`hover:bg-gray-50 transition-colors duration-150 ${
-                      index % 2 === 0 ? "bg-white" : "bg-[#F8F8F8]"
-                    }`}
-                  >
-                    <td className="p-[0.75rem] border-b border-gray-200 text-center">
-                      {(currentPage - 1) * itemsPerPage + index + 1}
-                    </td>
-                    {[
-                      "japanese",
-                      "english",
-                      "vietnamese",
-                      "chinese_traditional",
-                      "chinese_simplified",
-                    ].map((field) => (
-                      <td
-                        key={field}
-                        className="p-[0.75rem] border-b border-gray-200 text-center"
-                      >
-                        {editingId === sug.id ? (
-                          <textarea
-                            value={editedData[field] || ""}
-                            onChange={(e) =>
-                              handleInputChange(field, e.target.value)
-                            }
-                            className="w-full border-2 border-gray-300 rounded p-2 text-sm resize-y focus:border-blue-400 focus:outline-none transition-colors"
-                            rows={3}
-                          />
-                        ) : (
-                          <div className="truncate max-w-[150px] mx-auto">
-                            {sug[field] || "-"}
-                          </div>
-                        )}
-                      </td>
-                    ))}
-                    <td className="p-[0.75rem] border-b border-gray-200 text-center text-sm">
-                      {sug.created_by || "Anonymous"}
-                    </td>
-                    <td className="p-3 border-b border-gray-200 text-center">
-                      {editingId === sug.id ? (
-                        <div className="flex flex-col space-y-2">
-                          <button
-                            onClick={handleSubmitReview}
-                            className={`px-3 py-1 rounded hover:bg-blue-600 text-sm cursor-pointer ${
-                              isAllFieldsFilled()
-                                ? "bg-[#2F80ED] text-white"
-                                : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                            }`}
-                            disabled={!isAllFieldsFilled()}
-                          >
-                            Submit
-                          </button>
-                          <button
-                            onClick={() => setEditingId(null)}
-                            className="px-3 py-1 bg-gray-500 text-white rounded hover:bg-gray-600 text-sm cursor-pointer"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => handleStartEdit(sug)}
-                          className="px-3 py-1 bg-[#2F80ED] text-white rounded hover:bg-blue-600 text-sm cursor-pointer"
-                        >
-                          Review
-                        </button>
-                      )}
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr>
+                    <td colSpan={8} className="p-4">
+                      <div className="w-full h-1 bg-gray-200 rounded-full overflow-hidden fixed top-0 left-0">
+                        <div className="h-full bg-[#004098CC] animate-loading-bar"></div>
+                      </div>
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {!loading && allSuggestions.length > 0 && (
-          <div className="mt-4">
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={handlePageChange}
-            />
+                ) : suggestions.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={8}
+                      className="p-4 text-center text-gray-500 italic"
+                    >
+                      No pending suggestions found.
+                    </td>
+                  </tr>
+                ) : (
+                  suggestions.map((sug, index) => (
+                    <tr
+                      key={sug.id}
+                      className={`hover:bg-gray-50 transition-colors duration-150 ${
+                        index % 2 === 0 ? "bg-white" : "bg-[#F8F8F8]"
+                      }`}
+                    >
+                      <td className="p-[0.75rem] border-b border-gray-200 text-center">
+                        {(currentPage - 1) * itemsPerPage + index + 1}
+                      </td>
+                      {[
+                        "japanese",
+                        "english",
+                        "vietnamese",
+                        "chinese_traditional",
+                        "chinese_simplified",
+                      ].map((field) => (
+                        <td
+                          key={field}
+                          className="p-[0.75rem] border-b border-gray-200 text-center"
+                        >
+                          {editingId === sug.id ? (
+                            <textarea
+                              value={editedData[field] || ""}
+                              onChange={(e) =>
+                                handleInputChange(field, e.target.value)
+                              }
+                              className="w-full border-2 border-gray-300 rounded p-2 text-sm resize-y focus:border-blue-400 focus:outline-none transition-colors"
+                              rows={3}
+                            />
+                          ) : (
+                            <div className="truncate max-w-[150px] mx-auto">
+                              {sug[field] || "-"}
+                            </div>
+                          )}
+                        </td>
+                      ))}
+                      <td className="p-[0.75rem] border-b border-gray-200 text-center text-sm">
+                        {sug.created_by || "Anonymous"}
+                      </td>
+                      <td className="p-3 border-b border-gray-200 text-center">
+                        {editingId === sug.id ? (
+                          <div className="flex flex-col space-y-2">
+                            <button
+                              onClick={handleSubmitReview}
+                              className={`px-3 py-1 rounded hover:bg-blue-600 text-sm cursor-pointer ${
+                                isAllFieldsFilled()
+                                  ? "bg-[#2F80ED] text-white"
+                                  : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                              }`}
+                              disabled={!isAllFieldsFilled()}
+                            >
+                              Submit
+                            </button>
+                            <button
+                              onClick={() => setEditingId(null)}
+                              className="px-3 py-1 bg-gray-500 text-white rounded hover:bg-gray-600 text-sm cursor-pointer"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => handleStartEdit(sug)}
+                            className="px-3 py-1 bg-[#2F80ED] text-white rounded hover:bg-blue-600 text-sm cursor-pointer"
+                          >
+                            Review
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
-        )}
 
-        <ToastContainer
-          position="top-center"
-          autoClose={3000}
-          hideProgressBar={false}
-          newestOnTop={false}
-          closeOnClick
-          rtl={false}
-          pauseOnFocusLoss
-          draggable
-          pauseOnHover
-        />
+          {!loading && allSuggestions.length > 0 && (
+            <div className="mt-4">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={handlePageChange}
+              />
+            </div>
+          )}
+
+          <ToastContainer
+            position="top-center"
+            autoClose={3000}
+            hideProgressBar={false}
+            newestOnTop={false}
+            closeOnClick
+            rtl={false}
+            pauseOnFocusLoss
+            draggable
+            pauseOnHover
+          />
+        </div>
       </div>
     </div>
   );

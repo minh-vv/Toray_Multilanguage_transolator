@@ -1,7 +1,8 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../../services/api";
 import { notification, Spin } from "antd";
+import LanguageSelector from "./LanguageSelector";
 
 const LANGUAGE_CODES = {
   English: "en",
@@ -13,9 +14,7 @@ const LANGUAGE_CODES = {
 
 const UploadFile = () => {
   const [translating, setTranslating] = useState(false);
-  const [showLanguages, setShowLanguages] = useState(false);
-  const [selectedOriginLanguage, setSelectedOriginLanguage] =
-    useState("Origin Language");
+  const [selectedOriginLanguage, setSelectedOriginLanguage] = useState("Origin Language");
   const [availableTargetLanguages, setAvailableTargetLanguages] = useState([
     "English",
     "Japanese",
@@ -24,13 +23,11 @@ const UploadFile = () => {
     "Vietnamese",
   ]);
   const [selectedTargetLanguages, setSelectedTargetLanguages] = useState([]);
-  const [showTargetDropdown, setShowTargetDropdown] = useState(false);
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [tempFileData, setTempFileData] = useState(null);
   const navigate = useNavigate();
-  const targetDropdownRef = useRef(null);
 
   useEffect(() => {
     if (uploadProgress === 100 && tempFileData) {
@@ -43,46 +40,6 @@ const UploadFile = () => {
       setTempFileData(null);
     }
   }, [uploadProgress, tempFileData]);
-
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (targetDropdownRef.current && !targetDropdownRef.current.contains(event.target)) {
-        setShowTargetDropdown(false);
-      }
-    }
-
-    if (showTargetDropdown) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [showTargetDropdown]);
-
-  const handleOriginLanguageSelect = (language) => {
-    setSelectedOriginLanguage(language);
-    setShowLanguages(false);
-
-    let filtered = Object.keys(LANGUAGE_CODES).filter((l) => l !== language);
-
-    if (language === "Chinese (Traditional)") {
-      filtered = filtered.filter((l) => l !== "Chinese (Simplified)");
-    }
-    if (language === "Chinese (Simplified)") {
-      filtered = filtered.filter((l) => l !== "Chinese (Traditional)");
-    }
-    setAvailableTargetLanguages(filtered);
-    setSelectedTargetLanguages([]);
-  };
-
-  const handleTargetLanguageSelect = (language) => {
-    setSelectedTargetLanguages((prev) =>
-      prev.includes(language)
-        ? prev.filter((l) => l !== language)
-        : [...prev, language]
-    );
-  };
 
   const handleFileChange = (event) => {
     const selectedFiles = Array.from(event.target.files);
@@ -161,7 +118,6 @@ const UploadFile = () => {
         });
       }
 
-
       setTempFileData({
         publicUrl,
         fileType: ext,
@@ -217,7 +173,6 @@ const UploadFile = () => {
     setTranslating(true); 
 
     try {
-
       let fileUrlToTranslate = file.uri;
 
       if (file.fileType === "pdf" && file.docxUrl) {
@@ -254,115 +209,27 @@ const UploadFile = () => {
   };
 
   return (
-    <div className="w-full h-full flex flex-col bg-white flex-1 items-center justify-center rounded-2xl  relative">
-
+    <div className="w-full h-full flex flex-col bg-white flex-1 items-center justify-center rounded-2xl relative">
       <div className="w-full rounded-t-2xl p-4">
-        <div className="flex flex-row justify-between w-full ">
-
-          <div className="relative">
-            <button
-              className="bg-[#E9F9F9] border border-[#004098] rounded-full px-5 py-2 flex items-center justify-center text-sm w-50 shadow-sm relative"
-              onClick={() => setShowLanguages(!showLanguages)}
-            >
-              <span className="mx-auto">{selectedOriginLanguage}</span>
-            </button>
-            {showLanguages && (
-              <div className="absolute left-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-md w-50 z-10 overflow-hidden ">
-                <ul className="py-1">
-                  {[
-                    "English",
-                    "Japanese",
-                    "Chinese (Simplified)",
-                    "Chinese (Traditional)",
-                    "Vietnamese",
-                  ].map((lang, index) => (
-                    <li
-                      key={lang}
-                      className={`py-2.5 px-2 cursor-pointer text-center ${
-                        selectedOriginLanguage === lang
-                          ? "bg-[#E9F9F9]"
-                          : "hover:bg-gray-50"
-                      } ${index !== 0 ? "border-t border-gray-100" : ""}`}
-                      onClick={() => handleOriginLanguageSelect(lang)}
-                    >
-                      <span className="text-sm block w-full">{lang}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-
-
-          <div className="flex items-center space-x-3">
-            <div className="relative">
-              <button
-                className="bg-[#E9F9F9] border border-[#004098] rounded-full px-5 py-2 flex items-center justify-center text-sm w-50 shadow-sm"
-                onClick={() => setShowTargetDropdown(!showTargetDropdown)}
-              >
-                <span className="mx-auto">Target Language</span>
-              </button>
-              {showTargetDropdown && (
-                <div ref={targetDropdownRef} className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-md w-50 z-10 overflow-hidden">
-                  <ul className="py-1">
-                    {availableTargetLanguages.map((lang, index) => (
-                      <li
-                        key={lang}
-                        className={`py-3 px-2 cursor-pointer flex items-center ${
-                          selectedTargetLanguages.includes(lang)
-                            ? "bg-[#E9F9F9]"
-                            : "hover:bg-gray-50"
-                        } ${index !== 0 ? "border-t border-gray-100" : ""}`}
-                        onClick={() => handleTargetLanguageSelect(lang)}
-                      >
-                        <div
-                          className={`w-5 h-5 flex items-center justify-center mr-3 ${
-                            selectedTargetLanguages.includes(lang)
-                              ? "text-[#004098]"
-                              : "text-gray-300"
-                          }`}
-                        >
-                          {selectedTargetLanguages.includes(lang) ? (
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              viewBox="0 0 24 24"
-                              fill="currentColor"
-                              className="w-5 h-5"
-                            >
-                              <path d="M19 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V5a2 2 0 00-2-2z" />
-                              <path
-                                d="M10 17l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"
-                                fill="white"
-                              />
-                            </svg>
-                          ) : (
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              viewBox="0 0 24 24"
-                              fill="currentColor"
-                              className="w-5 h-5"
-                            >
-                              <path d="M19 5v14H5V5h14m0-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z" />
-                            </svg>
-                          )}
-                        </div>
-                        <span className="text-sm">{lang}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-
-            {file && (
+        <div className="flex flex-row justify-between w-full">
+          <LanguageSelector
+            selectedOriginLanguage={selectedOriginLanguage}
+            onOriginLanguageChange={setSelectedOriginLanguage}
+            selectedTargetLanguages={selectedTargetLanguages}
+            onTargetLanguagesChange={setSelectedTargetLanguages}
+            availableTargetLanguages={availableTargetLanguages}
+            onAvailableTargetLanguagesChange={setAvailableTargetLanguages}
+          />
+          {file && (
+            <div className="flex items-center">
               <button
                 onClick={handleRemoveFile}
-                className="bg-[#E9F9F9] border border-[#004098] rounded-full w-8 h-8 flex items-center justify-center shadow-sm hover:bg-[#d4e5f7] transition-colors"
+                className="bg-[#F0F7FF] border border-[#0066CC] rounded-full w-8 h-8 flex items-center justify-center shadow-sm hover:bg-[#E6F0FF] transition-colors ml-3"
                 title="Remove file"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  className="h-4 w-4 text-[#004098]"
+                  className="h-4 w-4 text-[#0066CC]"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -375,24 +242,22 @@ const UploadFile = () => {
                   />
                 </svg>
               </button>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
 
       <div className="flex flex-col flex-1 h-full w-full rounded-b-2xl items-center justify-center">
         {!file && (
           <div
-            className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 h-3/5 w-[90%] bg-[#F8F8F8] rounded-lg flex flex-col items-center justify-center text-center border border-gray-300 border-dashed p-4 "
+            className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 h-3/5 w-[90%] bg-[#F8F8F8] rounded-lg flex flex-col items-center justify-center text-center border border-gray-300 border-dashed p-4"
             onDrop={handleDrop}
             onDragOver={handleDragOver}
           >
             {uploading ? (
-              <div className="w-full flex flex-col items-center justify-center ">
-
+              <div className="w-full flex flex-col items-center justify-center">
                 <div className="relative w-36 h-36 mb-6">
                   <svg className="w-full h-full" viewBox="0 0 100 100">
-
                     <circle
                       cx="50"
                       cy="50"
@@ -401,7 +266,6 @@ const UploadFile = () => {
                       stroke="#E9F9F9"
                       strokeWidth="10"
                     />
-                    {/* Progress circle - stroke-dasharray sets the circumference */}
                     <circle
                       cx="50"
                       cy="50"
@@ -425,7 +289,6 @@ const UploadFile = () => {
                   {uploadProgress}% to complete
                 </p>
 
-                {/* Custom progress bar */}
                 <div className="w-full max-w-md h-2 bg-gray-200 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-[#004098] rounded-full"
@@ -467,7 +330,7 @@ const UploadFile = () => {
         )}
 
         {file && (
-          <div className="flex flex-col flex-1 w-[98%] rounded-lg gap-2 ">
+          <div className="flex flex-col flex-1 w-[98%] rounded-lg gap-2">
             <div
               className="iframe-container flex-1"
               style={{ height: "calc(70vh - 100px)", overflow: "hidden" }}
@@ -512,12 +375,12 @@ const UploadFile = () => {
         )}
 
         {file && (
-          <div className="w-full p-2 flex justify-center ">
+          <div className="w-full p-2 flex justify-center">
             {translating ? (
               <Spin size="large" />
             ) : (
               <button
-                className=" bg-[#004098] text-white px-8 py-2.5 w-48 rounded-full shadow hover:bg-[#002e6e] transition-colors"
+                className="bg-[#004098] text-white px-8 py-2.5 w-48 rounded-full shadow hover:bg-[#002e6e] transition-colors"
                 onClick={handleTranslateClick}
               >
                 Translate

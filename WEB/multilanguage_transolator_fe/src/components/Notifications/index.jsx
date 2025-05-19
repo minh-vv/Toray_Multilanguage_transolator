@@ -3,11 +3,11 @@ import { IoMdNotifications } from "react-icons/io";
 import ReactDOM from 'react-dom';
 import api from "../../services/api";
 
-// Helper function to check if two dates are within the specified weeks of each other
-const isWithinTimeframe = (date1, date2, weeks = 2) => {
+// Helper function to check if two dates are within the specified minutes of each other
+const isWithinTimeframe = (date1, date2, minutes = 30) => {
   const timeDifference = Math.abs(new Date(date1) - new Date(date2));
-  const dayDifference = timeDifference / (1000 * 60 * 60 * 24);
-  return dayDifference <= weeks * 7; // Convert weeks to days
+  const minuteDifference = timeDifference / (1000 * 60);
+  return minuteDifference <= minutes;
 };
 
 // Group notifications by time periods
@@ -441,15 +441,29 @@ const Notifications = () => {
             style={{
               animation: 'fadeInScale 0.3s ease-out',
               boxShadow: '0 16px 32px rgba(0, 0, 0, 0.25), 0 8px 16px rgba(0, 0, 0, 0.2)',
-              transform: 'translateY(0)', // Start with no transform
-              opacity: 1, // Start fully visible
-              position: 'relative', // Ensure it's positioned properly
-              zIndex: 2147483647 // Ensure maximum z-index within the portal
+              transform: 'translateY(0)',
+              opacity: 1,
+              position: 'relative',
+              zIndex: 2147483647
             }}
           >
-            <h3 className="text-lg text-[#004098CC] font-bold mb-4">
-              KEYWORD UPDATE DETAILS
-            </h3>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg text-[#004098CC] font-bold">
+                KEYWORD UPDATE DETAILS
+              </h3>
+              <button
+                className="text-gray-500 hover:text-gray-700 transition-colors"
+                onClick={() => setShowDetailPopup(false)}
+                style={{
+                  fontSize: '24px',
+                  lineHeight: '1',
+                  padding: '4px',
+                  cursor: 'pointer'
+                }}
+              >
+                ×
+              </button>
+            </div>
             <div className="overflow-x-auto">
               <table className="w-full border-collapse bg-white shadow-md rounded-lg overflow-hidden">
                 <thead>
@@ -505,27 +519,6 @@ const Notifications = () => {
                   ))}
                 </tbody>
               </table>
-            </div>
-            <div className="flex justify-center mt-4">
-              <button
-                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-all"
-                onClick={() => setShowDetailPopup(false)}
-                style={{
-                  boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-                  transform: 'translateY(0)',
-                  transition: 'all 0.2s'
-                }}
-                onMouseOver={(e) => {
-                  e.target.style.transform = 'translateY(-2px)';
-                  e.target.style.boxShadow = '0 6px 8px rgba(0, 0, 0, 0.15)';
-                }}
-                onMouseOut={(e) => {
-                  e.target.style.transform = 'translateY(0)';
-                  e.target.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
-                }}
-              >
-                Close
-              </button>
             </div>
           </div>
         </PopupPortal>
