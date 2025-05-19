@@ -14,7 +14,8 @@ const LANGUAGE_CODES = {
 
 const UploadFile = () => {
   const [translating, setTranslating] = useState(false);
-  const [selectedOriginLanguage, setSelectedOriginLanguage] = useState("Origin Language");
+  const [selectedOriginLanguage, setSelectedOriginLanguage] =
+    useState("Origin Language");
   const [availableTargetLanguages, setAvailableTargetLanguages] = useState([
     "English",
     "Japanese",
@@ -35,7 +36,7 @@ const UploadFile = () => {
         uri: tempFileData.publicUrl,
         fileType: tempFileData.fileType,
         docxUrl: tempFileData.docxUrl,
-        originalFileName: tempFileData.originalFileName
+        originalFileName: tempFileData.originalFileName,
       });
       setTempFileData(null);
     }
@@ -62,12 +63,12 @@ const UploadFile = () => {
 
   const uploadFile = async (fileToUpload) => {
     const ext = fileToUpload.name.split(".").pop()?.toLowerCase();
-    const allowedFormats = ["pdf", "docx", "xlsx"];
+    const allowedFormats = ["pdf", "docx", "xlsx", "pptx"];
 
     if (!ext || !allowedFormats.includes(ext)) {
       notification.error({
         message: "Invalid Format",
-        description: "Only PDF, DOCX, and XLSX are supported.",
+        description: "Only PDF, DOCX, XLSX, and PPTX are supported.",
       });
       return;
     }
@@ -121,8 +122,8 @@ const UploadFile = () => {
       setTempFileData({
         publicUrl,
         fileType: ext,
-        docxUrl: docxUrl, 
-        originalFileName: fileToUpload.name 
+        docxUrl: docxUrl,
+        originalFileName: fileToUpload.name,
       });
 
       setTimeout(() => {
@@ -170,7 +171,7 @@ const UploadFile = () => {
       return;
     }
 
-    setTranslating(true); 
+    setTranslating(true);
 
     try {
       let fileUrlToTranslate = file.uri;
@@ -183,7 +184,7 @@ const UploadFile = () => {
         file_url: fileUrlToTranslate,
         origin_language: LANGUAGE_CODES[selectedOriginLanguage],
         target_languages: selectedTargetLanguages.map((l) => LANGUAGE_CODES[l]),
-        original_file_name: file.originalFileName
+        original_file_name: file.originalFileName,
       };
 
       console.log("Payload for translation:", payload);
@@ -349,14 +350,14 @@ const UploadFile = () => {
                 />
               )}
 
-              {file.fileType === "xlsx" && (
+              {(file.fileType === "xlsx" || file.fileType === "pptx") && (
                 <iframe
                   src={`https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(
                     file.uri
                   )}`}
                   style={{ width: "100%", height: "100%" }}
                   frameBorder="0"
-                  title="XLSX Viewer"
+                  title={`${file.fileType.toUpperCase()} Viewer`}
                 />
               )}
 

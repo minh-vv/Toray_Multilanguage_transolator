@@ -43,13 +43,16 @@ const TranslationResults = () => {
 
   const getViewerSrc = (uri) => {
     const ext = uri.split(".").pop().toLowerCase();
-    return ext === "pdf"
-      ? `https://docs.google.com/viewer?url=${encodeURIComponent(
-          uri
-        )}&embedded=true`
-      : `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(
-          uri
-        )}`;
+    if (ext === "pdf") {
+      return `https://docs.google.com/viewer?url=${encodeURIComponent(
+        uri
+      )}&embedded=true`;
+    } else if (["docx", "xlsx", "pptx"].includes(ext)) {
+      return `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(
+        uri
+      )}`;
+    }
+    return uri;
   };
 
   const selectedFile = translatedFiles.find(
@@ -82,22 +85,26 @@ const TranslationResults = () => {
         <div className="flex flex-row p-4 gap-2 relative">
           {/* Origin Language Button */}
           <button className="bg-[#F0F7FF] border border-[#0066CC] rounded-full px-6 py-2 flex items-center justify-center text-sm w-48 shadow-sm hover:bg-[#E6F0FF] transition-colors duration-200">
-            <span className="mx-auto text-[#0066CC]">{getLanguageName(originalLanguage)} (Original)</span>
+            <span className="mx-auto text-[#0066CC]">
+              {getLanguageName(originalLanguage)} (Original)
+            </span>
           </button>
 
           {/* Spacer */}
           <div className="flex-1"></div>
 
           {/* Target Languages */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 overflow-x-auto">
             {translatedFiles.map((file) => (
               <button
                 key={file.language}
                 onClick={() => setSelectedLanguage(file.language)}
-                className={`rounded-full px-6 py-2 flex items-center justify-center text-sm shadow-sm border transition-colors duration-200
-                  ${file.language === selectedLanguage
-                    ? "bg-[#004098] text-white border-[#004098] hover:bg-[#002e6e]"
-                    : "bg-[#F0F7FF] text-[#0066CC] border-[#0066CC] hover:bg-[#E6F0FF]"}
+                className={`rounded-full px-6 py-2 flex items-center justify-center text-sm shadow-sm border transition-colors duration-200 whitespace-nowrap
+                  ${
+                    file.language === selectedLanguage
+                      ? "bg-[#004098] text-white border-[#004098] hover:bg-[#002e6e]"
+                      : "bg-[#F0F7FF] text-[#0066CC] border-[#0066CC] hover:bg-[#E6F0FF]"
+                  }
                 `}
               >
                 <span>{getLanguageName(file.language)}</span>
@@ -148,8 +155,6 @@ const TranslationResults = () => {
               />
             </div>
             <div className="flex-1 h-full rounded overflow-auto relative">
-              {/* Reposition language badge */}
-
               <iframe
                 src={getViewerSrc(selectedFile.url)}
                 className="w-full h-full"

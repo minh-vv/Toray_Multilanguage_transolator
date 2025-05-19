@@ -1,11 +1,11 @@
 import os
+import sys
 import docx
 import openpyxl
 import PyPDF2
 from django.http import JsonResponse
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny,IsAuthenticated
-from google.cloud import translate
 from dotenv import load_dotenv
 import tempfile
 import requests
@@ -13,6 +13,27 @@ from ..models.translated_file import TranslatedFile
 import boto3
 from botocore.exceptions import NoCredentialsError
 import uuid
+import logging
+
+# Cấu hình logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Thêm Translate_v2 vào PYTHONPATH
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.abspath(os.path.join(current_dir, '../../../../'))
+sys.path.append(project_root)
+
+try:
+    from Translate_v2.translate_docx import translate_docx
+    from Translate_v2.translate_pdf import pdf_to_docx, docx_to_pdf
+    from Translate_v2.translate_xlsx import translate_xlsx
+    from Translate_v2.translate_pptx import translate_pptx
+    from Translate_v2.detect_lang import detect_language, extract_content, LANGUAGES
+    logger.info("✅ Đã import thành công các module từ Translate_v2")
+except ImportError as e:
+    logger.error(f"❌ Lỗi khi import module từ Translate_v2: {str(e)}")
+    raise
 
 load_dotenv()
 
@@ -20,12 +41,6 @@ load_dotenv()
 PROJECT_ID = os.getenv("PROJECT_ID")
 GOOGLE_CREDENTIALS_PATH = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = GOOGLE_CREDENTIALS_PATH
-LANGUAGES = {
-    'vi': "Vietnamese",
-    'ja': "Japanese",
-    'zh-CN': "Chinese",
-    'en': "English"
-}
 
 def upload_file_path_to_s3(file_path, bucket_name, object_name=None):
     """
@@ -81,130 +96,129 @@ def upload_file_path_to_s3(file_path, bucket_name, object_name=None):
         print(f"Error uploading file: {str(e)}")
         return None
 
-# Hàm để trích xuất nội dung từ các file PDF, DOCX, XLSX
-def extract_content(file_path: str) -> str:
-    file_extension = file_path.split(".")[-1].lower()
-    
-    if file_extension == "pdf":
-        return extract_from_pdf(file_path)
-    elif file_extension == "docx":
-        return extract_from_docx(file_path)
-    elif file_extension == "xlsx":
-        return extract_from_xlsx(file_path)
-    else:
-        raise Exception("Unsupported file type")
-
-# Trích xuất văn bản từ file PDF
-def extract_from_pdf(file_path: str) -> str:
-    content = ""
-    with open(file_path, "rb") as f:
-        pdf_reader = PyPDF2.PdfReader(f)
-        for page in pdf_reader.pages:
-            content += page.extract_text() or ""
-            if len(content.split()) >= 100:
-                break
-    return content[:100]
-
-# Trích xuất văn bản từ file DOCX
-def extract_from_docx(file_path: str) -> str:
-    content = ""
-    doc = docx.Document(file_path)
-    for para in doc.paragraphs:
-        content += para.text + " "
-        if len(content.split()) >= 100:
-            break
-    return content[:100]
-
-# Trích xuất văn bản từ file XLSX
-def extract_from_xlsx(file_path: str) -> str:
-    content = ""
-    workbook = openpyxl.load_workbook(file_path)
-    sheet = workbook.active
-    for row in sheet.iter_rows(values_only=True):
-        for cell in row:
-            if cell:
-                content += str(cell) + " "
-                if len(content.split()) >= 100:
-                    break
-        if len(content.split()) >= 100:
-            break
-    return content[:100]
-
-# Phát hiện ngôn ngữ của văn bản
-def detect_language(text: str):
-    try:
-        client = translate.TranslationServiceClient()
-        parent = f"projects/{PROJECT_ID}/locations/global"
-        request = translate.DetectLanguageRequest(content=text, parent=parent)
-        response = client.detect_language(request=request)
-        detected_language = response.languages[0].language_code
-        return detected_language
-    except Exception as e:
-        raise Exception(f"Error detecting language: {str(e)}")
-
 # ======= Hàm dịch tài liệu =======
 def translate_document(file_path: str, target_language: str, original_file_url: str):
-    client = translate.TranslationServiceClient()
-    location = 'global'
-    parent = f"projects/{PROJECT_ID}/locations/{location}"
-    detected_language = detect_language(extract_content(file_path))
-
     file_extension = file_path.split(".")[-1].lower()
-    mime_types = {
-        "pdf": "application/pdf",
-        "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    }
+    logger.info(f"🔄 Bắt đầu dịch file: {file_path}")
+    logger.info(f"📝 Định dạng file: {file_extension}")
+    
+    try:
+        detected_language = detect_language(extract_content(file_path))
+        logger.info(f"🌍 Ngôn ngữ phát hiện được: {detected_language}")
+    except Exception as e:
+        logger.error(f"❌ Lỗi khi phát hiện ngôn ngữ: {str(e)}")
+        raise
 
-    if file_extension not in mime_types:
-        raise Exception("Unsupported file type")
-
-    mime_type = mime_types[file_extension]
-
-    with open(file_path, "rb") as document:
-        document_content = document.read()
-
-    # Dịch tài liệu
-    request = {
-        "parent": parent,
-        "document_input_config": {
-            "content": document_content,
-            "mime_type": mime_type,
-        },
-        "source_language_code": detected_language,
-        "target_language_code": target_language,
-    }
-
-    response = client.translate_document(request=request)
-    translated_content = response.document_translation.byte_stream_outputs[0]
-
-    # Ghi file tạm
+    # Tạo đường dẫn file tạm
     base_name = file_path.rsplit(".", 1)[0]
     translated_file_path = f"{base_name}_{target_language}.{file_extension}"
-    with open(translated_file_path, "wb") as out_file:
-        out_file.write(translated_content)
+    logger.info(f"📂 Đường dẫn file dịch: {translated_file_path}")
 
-    # Tạo object name + upload lên S3
-    bucket_name = os.getenv('AWS_STORAGE_BUCKET_NAME')
-    hash_name = f"{uuid.uuid4().hex}.{file_extension}"
-    object_name = f"translated/{hash_name}"
-    s3_url = upload_file_path_to_s3(translated_file_path, bucket_name, object_name)
+    temp_files = []  # Danh sách các file tạm cần xóa
 
-    # Nếu upload thất bại => raise Exception để dừng lại
-    if not s3_url:
-        os.remove(translated_file_path)
-        raise Exception("Failed to upload translated file to S3")
+    try:
+        if file_extension == "pdf":
+            logger.info("🔄 Xử lý file PDF")
+            docx_path = file_path.replace(".pdf", ".docx")
+            pdf_to_docx(file_path, docx_path)
+            temp_files.append(docx_path)
+            logger.info("✅ Đã chuyển PDF sang DOCX")
+            # Dịch DOCX cho ngôn ngữ đích cụ thể
+            translate_docx(docx_path, target_language)
+            logger.info("✅ Đã dịch DOCX")
+            # Chuyển DOCX đã dịch thành PDF
+            translated_pdf_path = docx_to_pdf(docx_path)
+            logger.info("✅ Đã chuyển DOCX sang PDF")
+            translated_file_path = translated_pdf_path
+        elif file_extension == "docx":
+            logger.info("🔄 Xử lý file DOCX")
+            # Dịch DOCX cho ngôn ngữ đích cụ thể
+            translate_docx(file_path, target_language)
+            logger.info("✅ Đã dịch DOCX")
+            
+        elif file_extension == "xlsx":
+            logger.info("🔄 Xử lý file XLSX")
+            translate_xlsx(file_path)
+            logger.info("✅ Đã dịch XLSX")
+            
+        elif file_extension == "pptx":
+            logger.info("🔄 Xử lý file PPTX")
+            translated_file_path = translate_pptx(file_path, target_language)
+            logger.info("✅ Đã dịch PPTX")
+            
+        else:
+            logger.error(f"❌ Định dạng file không được hỗ trợ: {file_extension}")
+            raise Exception("Unsupported file type")
 
-    os.remove(translated_file_path)
+        # Kiểm tra file dịch có tồn tại không
+        if not os.path.exists(translated_file_path):
+            logger.error(f"❌ Không tìm thấy file dịch: {translated_file_path}")
+            # Kiểm tra xem file gốc có bị thay đổi không
+            if os.path.exists(file_path):
+                logger.info("✅ File gốc vẫn tồn tại")
+                # Thử tạo file dịch từ file gốc
+                if file_extension == "docx":
+                    translate_docx(file_path, target_language)
+                elif file_extension == "xlsx":
+                    translate_xlsx(file_path)
+                elif file_extension == "pptx":
+                    translate_pptx(file_path)
+                logger.info("🔄 Đã thử dịch lại file")
+            else:
+                logger.error("❌ File gốc không tồn tại")
+            raise Exception(f"Translated file not found: {translated_file_path}")
 
-    return {
-        "translated_file_url": s3_url,
-        "original_file_url": original_file_url,
-        "original_file_name": os.path.basename(file_path),
-        "target_language": target_language,
-        "original_language": detected_language,
-        "file_type": file_extension,
-    }
+        # Kiểm tra kích thước file dịch
+        file_size = os.path.getsize(translated_file_path)
+        if file_size == 0:
+            logger.error("❌ File dịch có kích thước 0 bytes")
+            raise Exception("Translated file is empty")
+
+        logger.info(f"✅ File dịch tồn tại và có kích thước {file_size} bytes")
+
+        # Tạo object name + upload lên S3
+        bucket_name = os.getenv('AWS_STORAGE_BUCKET_NAME')
+        hash_name = f"{uuid.uuid4().hex}.{file_extension}"
+        object_name = f"translated/{hash_name}"
+        logger.info(f"📤 Đang upload file lên S3: {object_name}")
+        
+        s3_url = upload_file_path_to_s3(translated_file_path, bucket_name, object_name)
+
+        # Nếu upload thất bại => raise Exception để dừng lại
+        if not s3_url:
+            logger.error("❌ Upload file lên S3 thất bại")
+            raise Exception("Failed to upload translated file to S3")
+
+        logger.info(f"✅ Đã upload file lên S3 thành công: {s3_url}")
+
+        return {
+            "translated_file_url": s3_url,
+            "original_file_url": original_file_url,
+            "original_file_name": os.path.basename(file_path),
+            "target_language": target_language,
+            "original_language": detected_language,
+            "file_type": file_extension,
+        }
+    except Exception as e:
+        logger.error(f"❌ Lỗi trong quá trình dịch: {str(e)}")
+        raise e
+    finally:
+        # Dọn dẹp file tạm
+        for temp_file in temp_files:
+            try:
+                if os.path.exists(temp_file):
+                    os.remove(temp_file)
+                    logger.info(f"🧹 Đã xóa file tạm: {temp_file}")
+            except Exception as e:
+                logger.warning(f"⚠️ Không thể xóa file tạm {temp_file}: {str(e)}")
+
+        # Xóa file dịch nếu tồn tại
+        try:
+            if os.path.exists(translated_file_path):
+                os.remove(translated_file_path)
+                logger.info(f"🧹 Đã xóa file dịch tạm: {translated_file_path}")
+        except Exception as e:
+            logger.warning(f"⚠️ Không thể xóa file dịch tạm {translated_file_path}: {str(e)}")
 
 # ======= API View =======
 class TranslateFileView(APIView):
@@ -213,7 +227,7 @@ class TranslateFileView(APIView):
     def post(self, request):
         file_url = request.data.get("file_url")
         target_languages = request.data.get("target_languages") or []
-        original_file_name = request.data.get("original_file_name")  # ✅ lấy từ frontend
+        original_file_name = request.data.get("original_file_name")
 
         if not file_url or not target_languages:
             return JsonResponse({"detail": "Missing file_url or target_languages"}, status=400)
@@ -222,7 +236,7 @@ class TranslateFileView(APIView):
             return JsonResponse({"detail": "target_languages must be a list"}, status=400)
 
         file_ext = file_url.rsplit(".", 1)[-1].lower()
-        file_name = original_file_name or os.path.basename(file_url)  # ✅ ưu tiên tên gốc
+        file_name = original_file_name or os.path.basename(file_url)
         temp_path = os.path.join(tempfile.gettempdir(), f"tempfile.{file_ext}")
 
         try:
@@ -233,21 +247,32 @@ class TranslateFileView(APIView):
 
             results = []
             for lang in target_languages:
-                result = translate_document(temp_path, lang, file_url)
-                TranslatedFile.objects.create(
-                    user=request.user,
-                    original_file_url=file_url,
-                    original_file_name=file_name,
-                    translated_file_url=result["translated_file_url"],
-                    original_language=result["original_language"],
-                    target_language=lang,
-                    file_type=result["file_type"],
-                )
-                results.append({
-                    "language": lang,
-                    "url": result["translated_file_url"]
-                })
-        finally:
-            os.remove(temp_path)
+                try:
+                    result = translate_document(temp_path, lang, file_url)
+                    TranslatedFile.objects.create(
+                        user=request.user,
+                        original_file_url=file_url,
+                        original_file_name=file_name,
+                        translated_file_url=result["translated_file_url"],
+                        original_language=result["original_language"],
+                        target_language=lang,
+                        file_type=result["file_type"],
+                    )
+                    results.append({
+                        "language": lang,
+                        "url": result["translated_file_url"]
+                    })
+                except Exception as e:
+                    logger.error(f"❌ Lỗi khi dịch sang ngôn ngữ {lang}: {str(e)}")
+                    continue
 
-        return JsonResponse({"translated_files": results}, status=200)
+            if not results:
+                return JsonResponse({"detail": "Failed to translate to any target language"}, status=500)
+
+            return JsonResponse({"translated_files": results}, status=200)
+        except Exception as e:
+            logger.error(f"❌ Lỗi trong quá trình xử lý: {str(e)}")
+            return JsonResponse({"detail": str(e)}, status=500)
+        finally:
+            if os.path.exists(temp_path):
+                os.remove(temp_path)

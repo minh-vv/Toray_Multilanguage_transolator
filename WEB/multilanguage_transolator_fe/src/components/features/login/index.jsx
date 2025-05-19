@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../../services/api";
 import { ACCESS_TOKEN, REFRESH_TOKEN } from "../../../constants/constants";
+import { FaMicrosoft } from "react-icons/fa";
 
 function LoginForm({ route, method }) {
   const [email, setEmail] = useState("");
@@ -60,8 +61,21 @@ function LoginForm({ route, method }) {
     }
   };
 
+  const handleMicrosoftLogin = async () => {
+    try {
+      // Gọi API endpoint để xử lý đăng nhập Microsoft
+      const response = await api.post("/api/microsoft-login/");
+      if (response.data.authUrl) {
+        // Chuyển hướng người dùng đến trang đăng nhập Microsoft
+        window.location.href = response.data.authUrl;
+      }
+    } catch (error) {
+      setGeneralError("Failed to initiate Microsoft login");
+    }
+  };
+
   return (
-    <form onSubmit={handleLogin} className="form-container w-full">
+    <form onSubmit={handleLogin} className="space-y-4">
       <div className="mb-5 text-left">
         <label className="block text-gray-700 text-sm font-normal mb-2">
           Email address
@@ -161,9 +175,6 @@ function LoginForm({ route, method }) {
         {passwordError && (
           <p className="text-red-500 text-sm mt-1">{passwordError}</p>
         )}
-        {generalError && (
-          <p className="text-red-500 text-sm mt-1">{generalError}</p>
-        )}
       </div>
 
       <div className="text-right mb-6">
@@ -175,15 +186,39 @@ function LoginForm({ route, method }) {
         </a>
       </div>
 
-      <div className="flex justify-center">
+      <div className="flex flex-col space-y-4">
         <button
           type="submit"
-          className="w-48 py-2 bg-[#004098CC] text-white rounded-full hover:bg-[#00306E] transition font-medium"
+          className="w-full py-2 bg-[#004098CC] text-white rounded-full hover:bg-[#00306E] transition font-medium"
           disabled={loading}
         >
           {loading ? "Signing in..." : "Sign in"}
         </button>
+
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-gray-300"></div>
+          </div>
+          <div className="relative flex justify-center text-sm">
+            <span className="px-2 bg-white text-gray-500">
+              Or continue with
+            </span>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleMicrosoftLogin}
+          className="w-full py-2 px-4 border border-gray-300 rounded-full hover:bg-gray-50 transition flex items-center justify-center space-x-2"
+        >
+          <FaMicrosoft className="text-[#004098CC] text-xl" />
+          <span>Sign in with Microsoft</span>
+        </button>
       </div>
+
+      {generalError && (
+        <p className="text-red-500 text-sm text-center">{generalError}</p>
+      )}
     </form>
   );
 }
